@@ -1,0 +1,282 @@
+\documentclass{article}
+
+\title{Algorytm Molera-Morissona}
+\author{Aleksander Czeszejko-Sochacki} 
+\usepackage{amsmath}
+\usepackage{polski}
+\usepackage[utf8]{inputenc}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{hyperref}
+\usepackage{setspace}
+\usepackage{amssymb}
+
+\setlength\parindent{24pt}
+
+\begin{document}
+    \maketitle
+    \pagenumbering{arabic}
+    \section{Wprowadzenie}
+        \indent Algorytm Molera-Morissona to iteracyjna metoda obliczania 
+	wyrażeń postaci $\sqrt{a^2 + b^2}$\footnote{a, b $\in\mathbb{R}$, najlepiej gdy a, b $\in\mathbb{Q}$, ponieważ przybliżona reprezentacja
+	liczb niewymiernych może powiększać ewentualny błąd}. Tego typu funkcje 
+        pojawiają się nadzwyczaj często, między innymi przy obliczaniu:
+        \begin{itemize}
+            \item przeciwprostokątnej
+            \item modułu liczby zespolonej
+            \item normy wektora
+	    \item zmiany układu współrzędnych z eukidesowych na biegunowe
+        \end{itemize}
+	\par
+
+        \subsection{Pseudokod}
+            \begin{algorithm}
+            \caption{Algorytm iteracyjny Molera-Morissona}
+                \begin{algorithmic}
+                    \STATE $p := max(|a|, |b|)$\\
+                           $q := min(|a|, |b|)$
+                    \WHILE{wartość q jest znacząca}
+                        \STATE $r:= (\frac{q}{p})^2$\\
+                               $s := \frac{r}{4 + r}$\\
+                               $p := p + 2*s*p$\\
+                               $q := s * q$\\
+                    \ENDWHILE
+                    \RETURN p
+
+                \end{algorithmic}
+            
+            \end{algorithm}
+	    
+	    \indent Od razu możemy zauważyć zalety algorytmu - nie wymaga on używania skomplikowanych operacji arytmetycznych,
+	    a każda iteracja składa się z kilku elementarnych działań i przypisów. 
+        \newpage
+	
+        \subsection{Liczba iteracji}
+            \indent Dowodzi się, że po 3 iteracjach algorytmu błąd względny jest na poziomie $0.5 * 10^{-20}$, 
+            co uznamy za wystarczającą dokładność w naszym artykule. W przypadku chęci szerszej analizy zbieżności i numerycznej poprawności
+	    odsyłamy Czytelnika do rozdziału czwartego \url{https://blogs.mathworks.com/images/cleve/moler_morrison.pdf}
+            \par
+	    
+	\subsection{Opis użytych metod}
+	    \indent W swoim sprawozdaniu zaprezentuję obliczenia wykonane w języku Julia.
+	    Przeprowadzone zostały w dwóch arytmetykach:
+	    \begin{enumerate}
+	        \item double, tzn. Float64
+		\item BigFloat(128)
+	    \end{enumerate}
+            \par
+	    
+	    \indent Dlaczego takie arytmetyki? Precyzja arytmetyki Float64 może okazać się niewystarczająca, ponieważ wynosi ona
+	    \[\frac{1}{2}2^{-52} = \frac{1}{8}{(2^{-10})}^5 \approx 10^{-16}\]
+	    
+	    \begin{center}
+	       \begin{tabular}{| l | l | l |}
+	           \hline
+		   Numer iteracji  &  Błąd względny dla pary (3, 4)  &  Błąd względny dla pary (-5, 12)\\
+		   \hline
+		   2.              &  5.162349481224737e-9,         &  5.241619104568739e-13\\
+		   3.              &  1.7763568394002506e-16,       &  1.3664283380001927e-16\\
+		   \hline
+	       \end{tabular}
+	    \end{center}
+	    
+	    Powyższe wyniki zgadzają się z naszym wnioskiem. Powyższe błędy po trzeciej iteracji powinny być rzędu najwyżej $10^{-21}$.
+	    Powinniśmy dobrać taką arytmetykę, której precyzja będzie mniejsza niż $\frac{1}{2}2^{-20}$. Zakładając, że zwiększając w Julii liczbę bitów przydzielanych dla arytmetyki dwukrotnie, w przybliżeniu
+	    dwukrotnie zwiększa się liczba bitów przydzielanych na mantysę, precyzja arytmetyki BigFloat(128) wynosi około:
+	    \[\frac{1}{2}2^{-100} = \frac{1}{2}{(2^{-10})}^{10} \approx 10^{-31}\] co zdecydowanie wystarczy na wychwycenie ewentualnego
+	    błędu algorytmu.
+	    
+	    
+	    Za wartość dokładną $\sqrt{a}$ będę uznawał wartość funkcji sqrt(a) w arytmetyce BigFloat(128)
+	    \par
+	   
+    
+    \section{Analiza Algorytmu}	   
+	   \subsection{Testownie algorytmu dla wybranych danych}
+	   \paragraph{Poniżej przeprowadzimy testy dla następująch danych:}
+	   
+	   \[(3, 4), (-5, 12), (7, -24), (1, 1), (1000000000,2), (71075075103, 1000000000)\] 
+	   
+	   
+	   \paragraph{Testy (trzy iteracje:)}
+	   
+	   \subparagraph{(3, 4), dokładna wartość: 5.000000000000000000000000000000000000000\\ Małe wartości obu danych, całkowity wynik}
+	   \begin{center}
+	       \begin{tabular}{| l | l | l |}
+	           \hline
+		       Numer iteracji  &  Wynik algorytmu (Float64)  &  Wynik algorytmu (BigFloat(128))\\
+		   \hline
+		       1               &  4.986301369863014          &  4.986301369863013698630136986301369863002\\
+		       2               &  4.999999974188253          &  4.999999974188252149492661061886530575595\\
+		       3               &  5.000000000000001          &  4.999999999999999999999999828030176654495\\
+		   \hline
+	       \end{tabular}
+	   \end{center}
+	   \vspace{1cm}
+	   
+	   \subparagraph{(-5, 12), dokładna wartość: 1.300000000000000000000000000000000000000e+01\\ Pierwsza dana ujemna, całkowity wynik}
+	   \begin{center}
+	       \begin{tabular}{| l | l | l |}
+	           \hline
+		       Numer iteracji  &  Wynik algorytmu (Float64)  &  Wynik algorytmu (BigFloat(128))\\
+		   \hline
+		       1               &  12.998336106489186         &  1.299833610648918469217970049916805324457e+01\\
+		       2               &  12.999999999993186         &  1.29999999999931842560000017867063951355e+01\\
+		       3               &  13.000000000000002         &  1.299999999999999999999999999999999999948e+01\\
+		   \hline
+	       \end{tabular}
+	   \end{center}
+	   \vspace{1cm}
+	   
+	   \subparagraph{(7, -24), dokładna wartość: 2.500000000000000000000000000000000000000e+01\\ Druga dana ujemna, całkowity wynik}
+	   \begin{center}
+	       \begin{tabular}{| l | l | l |}
+	           \hline
+		       Numer iteracji  &  Wynik algorytmu (Float64)  &  Wynik algorytmu (BigFloat(128))\\
+		   \hline
+		       1               &  24.999575010624735         &  2.499957501062473438164045898852528686783e+01\\
+		       2               &  24.99999999999997          &  2.499999999999996929526990921773880960337e+01\\
+		       3               &  25.000000000000004         &  2.500000000000000000000000000000000000000e+01\\
+		   \hline
+	       \end{tabular}
+	   \end{center}
+	   \vspace{1cm}
+	   
+	   \subparagraph{(1, 1), dokładna wartość: 1.414213562373095048801688724209698078569\\ Równe obie dane, nie dają całkowitego wyniku}
+	   \begin{center}
+	       \begin{tabular}{| l | l | l |}
+	           \hline
+		       Numer iteracji  &  Wynik algorytmu (Float64)  &  Wynik algorytmu (BigFloat(128))\\
+		   \hline
+		       1               &  1.4                        &  1.399999999999999999999999999999999999999\\
+		       2               &  1.4142131979695431         &  1.414213197969543147208121827411167512687\\
+		       3               &  1.4142135623730951         &  1.41421356237309504879564008075425994635\\
+		   \hline
+	       \end{tabular}
+	   \end{center}
+	   \vspace{1cm}
+	   
+	   \subparagraph{(1000000000, 2), dokładna wartość: 1.000000000000000001999999999999999998001e+09\\ Duża pierwsza dana, duża względna różnica, nie dają
+	   całkowitego wyniku}
+	   \begin{center}
+	       \begin{tabular}{| l | l | l |}
+	           \hline
+		       Numer iteracji  &  Wynik algorytmu (Float64)  &  Wynik algorytmu (BigFloat(128))\\
+		   \hline
+		       1               &  1.0e9                      &  1.000000000000000001999999999999999998001e+09\\
+		       2               &  1.0e9                      &  1.000000000000000001999999999999999998001e+09\\
+		       3               &  1.0e9                      &  1.000000000000000001999999999999999998001e+09\\
+		   \hline
+	       \end{tabular}
+	   \end{center}
+	   \vspace{1cm}
+	   
+	   \subparagraph{(71075075103, 1000000000), dokładna wartość: \\7.108210956982840179871838428090505048092e+10\\ Duże obie dane, nie dają całkowitego wyniku}
+	   \begin{center}
+	       \begin{tabular}{| l | l | l |}
+	           \hline
+		       Numer iteracji  &  Wynik algorytmu (Float64)  &  Wynik algorytmu (BigFloat(128))\\
+		   \hline
+		       1               &  7.108210956981117e10       &  7.108210956981117607726957458289901508523e+10\\
+		       2               &  7.10821095698284e10        &  7.108210956982840179871838428090505048092e+10\\
+		       3               &  7.10821095698284e10        &  7.108210956982840179871838428090505048132e+10\\
+		   \hline
+	       \end{tabular}
+	   \end{center}
+           \vspace{1cm}
+	   
+	   \indent Możemy w powyższych przykładach zaobserwować następujące zjawiska:
+	   \begin{itemize}
+	       \item Zmniejszenie precyzji arytmetyki powoduje zwiększenie liczby cyfr znaczących
+	       \item Algorytm nie wyliczył oczekiwanych wartości całkowitych dla pierwszych trzech par
+	     \end{itemize}
+	   
+	   Więcej obserwacji będziemy w stanie wyciągnąć po analizie błędów względnych.
+	   \par
+	   
+	   \paragraph{Błędy względne}\footnote{dla przejrzystości zmniejszyłem liczbę nieznaczących zer w błędach w arytmetyce BigFloat(128); $\tilde{y}$ - wynik algorytmu, 
+	    y - wartość obliczona przy pomocy funkcji sqrt()}
+	   
+	   \begin{center}
+	       \begin{tabular}{| l | l | l |}
+	           \hline
+		   Dane                       &  $\frac{|\Delta y|}{y}$, $\tilde{y}$ we Float64           &  $\frac{|\Delta y|}{y}$, $\tilde{y}$ w BigFloat(128)\\
+		   \hline
+		       (3, 4)                     &  1.776356839400250464677810668945312500001e-16  &  0.0\\
+		       (-5, 12)                   &  1.366428338000192665136777437650240384618e-16  &  0.0\\
+		       (7, -24)                   &  1.421085471520200371742248535156250000001e-16  &  0.0\\
+		       (1, 1)                     &  0.000000000000000000000000000000000000000      &  0.0\\
+		       (1000000000, 2)            &  0.000000000000000000000000000000000000000      &  0.0\\
+		       (71075075103, 1000000000)  &  0.000000000000000000000000000000000000000      &  0.0\\
+		   \hline
+	       \end{tabular}
+	   \end{center}
+	   \vspace{1cm}
+	   
+	   \indent Obserwacje (w powyższych przykładach):
+	   \begin{itemize}
+	     \item Błędy w arytmetyce Float64 są najwyżej rzędu $10^{-16}$, co zgadza się z przybliżoną wartością
+	     precyzji tej arytmetyki obliczoną we wprowadzeniu
+	     \item W niektórych przypadkach błędy są zerowe (lub mniejsze niż precyzja arytmetyki)
+	     \item W arytemtyce BigFloat(128) wszyskie błędy są zerowe (lub mniejsze niż precyzja arytmetyki)
+	     \item Błedy w arytmetyce BigFloat(128) są niewiększe niż we Float64
+	   \end{itemize}
+	   
+	   \newtheorem{hip}{Hipoteza}
+	   \begin{hip}
+	      Dla dostatecznie dużej precyzji algorytm zwraca \underline{matematycznie dokładny} wynik dla dowolnych danych
+	      (nie wiadomo, czy taka precyzja jest osiągalna na każdej maszynie).
+	   \end{hip}
+
+	   
+	\subsection{Ciekawostka}
+	    \indent Algorytm zachowuje się ciekawie, gdy opuścimy wartości bezwzględne w inicjalizacji zmiennych. Po trzeciej iteracji
+	    \[\sqrt{(-7)^2 + 24^2} \neq \sqrt{7^2 + (-24)^2}\]
+	    natomiat po czwartej
+	    \[\sqrt{(-7)^2 + 24^2} = \sqrt{7^2 + (-24)^2}\]
+	    Zachęcam Czytelnika do przeprowadzenia własnych eksperymentów.
+	    \par
+        \subsection{Zalety stosowania algorytmu}
+	    \indent Algorytm iteracyjny Molera-Morissona ma bardzo przyzwoity wykładnik zbieżności - z każdą iteracją liczba cyfr znaczących
+	    zwiększa się około trzykrotnie. Niewątpliwą jego przewagą nad liczeniem wyrażenia przy pomocy funkcji sqrt() jest fakt, że w algorytmie
+	    nie podnosimy danych do kwadratu, przez co ma dużo mniejszą złożoność pamięciową. Złożoność czasowa zależy od czasu wykonywania elementarnych
+	    operacji (chyba że chcemy wykonać więcej niż trzy iteracje).
+	    
+	    
+    \section{Zasosowanie algorytmu Molera-Morissona do obliczania normy wektora}
+        \indent Normą wektora x nazywamy wyrażenie:
+	\[\Arrowvert x \Arrowvert = \sqrt{\sum_{i=1}^{n}x_i^2}\]
+	Możemy ją jednak zapisać następująco:
+	
+	\begin{equation}
+	  \begin{split}
+	    \sqrt{\sum_{i=1}^{n}x_i^2} &= \underbrace{\sqrt{x_1^2 + x_2^2 + \cdots + x_n^2}}_{n}\\ &= \sqrt{\sqrt{(\sqrt{x_1^2 + x_2^2})^2 + x_3^2}^2 +
+	      \cdots + x_n^2}\\ &= \sqrt{\sqrt{\sqrt{\sqrt{(\sqrt{x_1^2 + x_2^2})^2 + x_3^2}^2 +
+		  \cdots + x_{n-1}}^2 + x_n^2}} 
+	  \end{split}
+	\end{equation}
+        
+	\subsection{Pseudokod obliczania normy wektora}
+	
+	   \indent Powyższe rozpisanie umożliwia nam zapisanie algorytmu:
+	   \begin{algorithm}
+            \caption{Algorytm iteracyjny Molera-Morissona}
+                \begin{algorithmic}
+		  \STATE result = $x_1$
+		  \FOR{i in 2, 3, $\cdots$, n}
+		      \STATE result = Moler-Morrison(result, $x_i$)
+		  \ENDFOR
+		  \RETURN result
+                \end{algorithmic}        
+            \end{algorithm}
+	    
+	    Dokładność otrzymanego wyniku będzie zależna od dokładności samego algorytmu, jak i kolejności sumowania, 
+	    jednak problem kolejności sumowania dla uzyskania najmniejszego błędu to temat obszerny i nie będzie on rozważany
+	    w tym artykule.
+            \par
+	   
+	    \begin{thebibliography}{99}
+	      \bibitem{pa} C.~Moler, D.~Morrison: Replacing Square Roots by Pythagorean Sums
+	    \end{thebibliography}
+
+\end{document}\documentclass[10pt,a4paper]{article}
